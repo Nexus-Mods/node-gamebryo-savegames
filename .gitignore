@@ -1,3 +1,7 @@
-build 
-node_modules  
+build
+node_modules
 lz4
+auto-top.gypi
+auto.gypi
+dist/liblz4.dll
+dist/nbind.node

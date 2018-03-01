@@ -1,4 +1,7 @@
 #include "gamebryosavegame.h"
+
+#include "string_cast.h"
+
 #include <stdexcept>
 #include <vector>
 #include <ctime>
@@ -19,7 +22,7 @@ uint32_t windowsTicksToEpoch(int64_t windowsTicks)
 class DirectDecoder : public IDecoder {
 public:
   DirectDecoder(const std::string &fileName)
-    : m_File(fileName.c_str(), std::ios::in | std::ios::binary)
+    : m_File(toWC(fileName.c_str(), CodePage::UTF8, fileName.length()).c_str(), std::ios::in | std::ios::binary)
   {
     if (!m_File.is_open()) {
       throw std::runtime_error(fmt::format("failed to open {}", fileName));

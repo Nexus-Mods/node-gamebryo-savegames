@@ -10,7 +10,7 @@
     "emcc-path": "emcc-path",
     "copyasm": "copyasm",
     "prebuild": "gulp download-lz4",
-    "build": "autogypi && node-gyp configure --msvs_version=2015 build",
+    "build": "autogypi && node-gyp configure build",
     "rebuild": "electron-rebuild -v 1.8.2",
     "install": "npm run build && copyasm build dist && copyfiles -f ./lz4/dll/liblz4.dll dist"
   },
@@ -19,7 +19,7 @@
   "dependencies": {
     "autogypi": "^0.2.2",
     "copyfiles": "^1.0.0",
-    "nbind": "^0.3.6",
+    "nbind": "^0.3.15",
     "node-gyp": "^3.4.0",
     "gulp": "^3.9.1",
     "gulp-downloader": "^1.0.4",

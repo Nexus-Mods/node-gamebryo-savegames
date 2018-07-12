@@ -99,10 +99,18 @@ GamebryoSaveGame::GamebryoSaveGame(const std::string &fileName)
       throw std::runtime_error("invalid file header");
     }
   }
+
   if (m_CreationTime == 0) {
+#ifdef _WIN32
+    struct _stat fileStat;
+    int res = _wstat(toWC(fileName.c_str(), CodePage::UTF8, fileName.size()).c_str(), &fileStat);
+#else
     struct stat fileStat;
-    stat(fileName.c_str(), &fileStat);
-    m_CreationTime = static_cast<uint32_t>(fileStat.st_ctime);
+    int res = stat(fileName.c_str(), &fileStat);
+#endif
+    if (res == 0) {
+      m_CreationTime = static_cast<uint32_t>(fileStat.st_ctime);
+    }
   }
 }
 

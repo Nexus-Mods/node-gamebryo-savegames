@@ -374,14 +374,27 @@ void GamebryoSaveGame::FileWrapper::readImage(bool alpha)
 
 void GamebryoSaveGame::FileWrapper::readImage(unsigned long width, unsigned long height, bool alpha)
 {
-  m_Game->m_ScreenshotDim = Dimensions(width, height);
+  // sanity check to prevent us from trying to open a ridiculously large buffer for the image
+  if ((width > 2000) || (height > 2000)) {
+    NBIND_ERR("Invalid image dimensions");
+    return;
+  }
 
   int bpp = alpha ? 4 : 3;
 
   int bytes = width * height * bpp;
 
   std::vector<uint8_t> buffer;
-  buffer.resize(bytes);
+  try {
+    buffer.resize(bytes);
+  }
+  catch (const std::bad_alloc&) {
+    NBIND_ERR("Out of memory");
+    return;
+  }
+
+  m_Game->m_ScreenshotDim = Dimensions(width, height);
+
   read(&buffer[0], bytes);
 
   if (alpha) {

@@ -77,25 +77,32 @@ private:
 
 GamebryoSaveGame::GamebryoSaveGame(const std::string &fileName)
  : m_FileName(fileName)
-  //m_CreationTime(QFileInfo(file).lastModified()),
+ , m_CreationTime(0)
 {
-  FileWrapper file(this);
+  {
+    FileWrapper file(this);
 
-  bool found = false;
-  for (auto hdr : {
-    std::make_pair("TES4SAVEGAME", &GamebryoSaveGame::readOblivion),
-    std::make_pair("TESV_SAVEGAME", &GamebryoSaveGame::readSkyrim),
-    std::make_pair("FO3SAVEGAME", &GamebryoSaveGame::readFO3),
-    std::make_pair("FO4_SAVEGAME", &GamebryoSaveGame::readFO4)
+    bool found = false;
+    for (auto hdr : {
+      std::make_pair("TES4SAVEGAME", &GamebryoSaveGame::readOblivion),
+      std::make_pair("TESV_SAVEGAME", &GamebryoSaveGame::readSkyrim),
+      std::make_pair("FO3SAVEGAME", &GamebryoSaveGame::readFO3),
+      std::make_pair("FO4_SAVEGAME", &GamebryoSaveGame::readFO4)
     }) {
       if (file.header(hdr.first)) {
         found = true;
         (this->*hdr.second)(file);
       }
-  }
+    }
 
-  if (!found) {
-    throw std::runtime_error("invalid file header");
+    if (!found) {
+      throw std::runtime_error("invalid file header");
+    }
+  }
+  if (m_CreationTime == 0) {
+    struct stat fileStat;
+    stat(fileName.c_str(), &fileStat);
+    m_CreationTime = static_cast<uint32_t>(fileStat.st_ctime);
   }
 }
 

@@ -221,9 +221,14 @@ void GamebryoSaveGame::readSkyrim(GamebryoSaveGame::FileWrapper &file)
     file.setCompression(compressionFormat, compressed, uncompressed);
   }
 
-  file.skip<unsigned char>(); // form version
+  unsigned char formVersion;
+  file.read(formVersion); // form version
   file.skip<unsigned long>(); // plugin info size
   file.readPlugins();
+
+  if (formVersion >= 0x4e) {
+    file.readLightPlugins();
+  }
 }
 
 void GamebryoSaveGame::readFO3(GamebryoSaveGame::FileWrapper &file)

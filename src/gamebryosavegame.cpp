@@ -109,7 +109,7 @@ GamebryoSaveGame::GamebryoSaveGame(const std::string &fileName)
     int res = stat(fileName.c_str(), &fileStat);
 #endif
     if (res == 0) {
-      m_CreationTime = static_cast<uint32_t>(fileStat.st_ctime);
+      m_CreationTime = static_cast<uint32_t>(fileStat.st_mtime);
     }
   }
 }

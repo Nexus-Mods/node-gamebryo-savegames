@@ -361,15 +361,17 @@ template <> void GamebryoSaveGame::FileWrapper::read(std::string &value)
     read(length);
   }
   std::string buffer;
-  buffer.resize(length);
-  read(&buffer[0], length);
+  if (length) {
+    buffer.resize(length);
+    read(&buffer[0], length);
 
-  if (m_BZString) {
-    buffer.resize(buffer.length() - 1);
-  }
+    if (m_BZString) {
+      buffer.resize(buffer.length() - 1);
+    }
 
-  if (m_HasFieldMarkers) {
-    skip<char>();
+    if (m_HasFieldMarkers) {
+      skip<char>();
+    }
   }
 
   // TODO: Need to convert from latin1 to utf8!

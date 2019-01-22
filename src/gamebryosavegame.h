@@ -4,6 +4,7 @@
 #include <fstream>
 #include <vector>
 #include <memory>
+#include <nan.h>
 #include "fmt/format.h"
 #include "nbind/nbind.h"
 
@@ -41,6 +42,8 @@ public:
   virtual bool read(char *buffer, size_t size) = 0;
 };
 
+void create(const std::string &fileName, nbind::cbFunction callback);
+
 class GamebryoSaveGame
 {
 public:
@@ -59,7 +62,7 @@ public:
   
   void screenshot(nbind::Buffer buffer) const {
     uint8_t *outData = buffer.data();
-    memcpy(outData, m_Screenshot.data(), std::min(buffer.length(), m_Screenshot.size()));
+    memcpy(outData, m_Screenshot.data(), (std::min)(buffer.length(), m_Screenshot.size()));
   }
   std::string fileName() const { return m_FileName; }
 
@@ -158,6 +161,11 @@ private:
 
 template <> void GamebryoSaveGame::FileWrapper::read<std::string>(std::string &);
 
+
+v8::Local<v8::String> operator "" _n(const char *input, size_t) {
+  return Nan::New(input).ToLocalChecked();
+}
+
 NBIND_CLASS(Dimensions) {
   getter(width);
   getter(height);
@@ -175,3 +183,8 @@ NBIND_CLASS(GamebryoSaveGame) {
   getter(screenshotSize);
   method(screenshot);
 }
+
+NBIND_GLOBAL() {
+  function(create);
+}
+

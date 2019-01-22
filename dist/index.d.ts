@@ -21,6 +21,7 @@ declare module 'gamebryo-savegame' {
   interface Lib {
     Dimensions: Dimensions;
     GamebryoSaveGame: GamebryoSaveGame;
+    create: (filePath: string) => GamebryoSaveGame;
   }
 
   function init(subpath: string): Lib;

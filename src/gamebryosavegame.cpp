@@ -468,3 +468,64 @@ void GamebryoSaveGame::FileWrapper::setCompression(unsigned short format, unsign
     m_Decoder.reset(new LZ4Decoder(m_Decoder, compressedSize, uncompressedSize));
   }
 }
+
+class LoadWorker : public Nan::AsyncWorker {
+public:
+  LoadWorker(const std::string &filePath, Nan::Callback *appCallback)
+    : Nan::AsyncWorker(appCallback)
+    , m_FilePath(filePath)
+    , m_Game(nullptr)
+  {}
+
+  ~LoadWorker() {
+    delete m_Game;
+  }
+
+  void Execute() {
+    m_Game = new GamebryoSaveGame(m_FilePath);
+  }
+
+  void HandleOKCallback() {
+    Nan::HandleScope scope;
+
+    v8::Local<v8::Object> res = Nan::New<v8::Object>();
+    res->Set("fileName"_n, Nan::New(m_Game->fileName().c_str()).ToLocalChecked());
+    res->Set("characterLevel"_n, Nan::New(m_Game->characterLevel()));
+    res->Set("characterName"_n, Nan::New(m_Game->characterName().c_str()).ToLocalChecked());
+    res->Set("creationTime"_n, Nan::New(m_Game->creationTime()));
+    res->Set("location"_n, Nan::New(m_Game->location().c_str()).ToLocalChecked());
+    res->Set("saveNumber"_n, Nan::New(m_Game->saveNumber()));
+
+    v8::Local<v8::Array> plugins = Nan::New<v8::Array>();
+    std::vector<std::string> pluginsIn = m_Game->plugins();
+    for (int i = 0; i < pluginsIn.size(); ++i) {
+      plugins->Set(i, Nan::New(pluginsIn[i]).ToLocalChecked());
+    }
+    res->Set("plugins"_n, plugins);
+
+    Dimensions sizeIn = m_Game->screenshotSize();
+    v8::Local<v8::Object> screenSize = Nan::New<v8::Object>();
+    screenSize->Set("width"_n, Nan::New(sizeIn.width()));
+    screenSize->Set("height"_n, Nan::New(sizeIn.height()));
+    res->Set("screenshotSize"_n, screenSize);
+
+    v8::Local<v8::Value> argv[] = {
+      Nan::Null(),
+      res,
+    };
+
+    callback->Call(2, argv);
+  }
+
+private:
+
+  std::string m_FilePath;
+  GamebryoSaveGame *m_Game;
+
+};
+
+void create(const std::string & fileName, nbind::cbFunction callback) {
+  Nan::AsyncQueueWorker(
+    new LoadWorker(fileName, new Nan::Callback(callback.getJsFunction())));
+}
+

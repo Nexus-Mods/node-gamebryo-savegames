@@ -510,7 +510,8 @@ public:
     screenSize->Set("height"_n, Nan::New(sizeIn.height()));
     res->Set("screenshotSize"_n, screenSize);
     std::vector<uint8_t> buffer = m_Game->screenshotData();
-    res->Set("screenshot"_n, v8::ArrayBuffer::New(isolate, &buffer[0], buffer.size(), v8::ArrayBufferCreationMode::kExternalized));
+    auto temp = v8::ArrayBuffer::New(isolate, &buffer[0], buffer.size(), v8::ArrayBufferCreationMode::kExternalized);
+    res->Set("screenshot"_n, v8::Uint8ClampedArray::New(temp, 0, temp->ByteLength()));
 
     v8::Local<v8::Value> argv[] = {
       Nan::Null(),

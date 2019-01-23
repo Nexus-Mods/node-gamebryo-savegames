@@ -60,10 +60,15 @@ public:
   std::vector<std::string> plugins() const { return m_Plugins; }
   Dimensions screenshotSize() const { return m_ScreenshotDim; }
   
-  void screenshot(nbind::Buffer buffer) const {
+  void getScreenshot(nbind::Buffer buffer) const {
     uint8_t *outData = buffer.data();
     memcpy(outData, m_Screenshot.data(), (std::min)(buffer.length(), m_Screenshot.size()));
   }
+
+  const std::vector<uint8_t> &screenshotData() const {
+    return m_Screenshot;
+  }
+
   std::string fileName() const { return m_FileName; }
 
 private:
@@ -181,7 +186,7 @@ NBIND_CLASS(GamebryoSaveGame) {
   getter(creationTime);
   getter(fileName);
   getter(screenshotSize);
-  method(screenshot);
+  method(getScreenshot);
 }
 
 NBIND_GLOBAL() {

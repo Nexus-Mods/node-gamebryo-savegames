@@ -15,13 +15,14 @@ declare module 'gamebryo-savegame' {
     creationTime: number;
     fileName: string;
     screenshotSize: Dimensions;
-    screenshot: any;
+    getScreenshot?: () => any;
+    screenshot?: any;
   }
 
   interface Lib {
     Dimensions: Dimensions;
     GamebryoSaveGame: GamebryoSaveGame;
-    create: (filePath: string) => GamebryoSaveGame;
+    create: (filePath: string, (err: Error, save: GamebryoSaveGame) => void);
   }
 
   function init(subpath: string): Lib;

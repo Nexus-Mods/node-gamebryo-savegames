@@ -487,6 +487,7 @@ public:
 
   void HandleOKCallback() {
     Nan::HandleScope scope;
+    v8::Isolate* isolate = v8::Isolate::GetCurrent();
 
     v8::Local<v8::Object> res = Nan::New<v8::Object>();
     res->Set("fileName"_n, Nan::New(m_Game->fileName().c_str()).ToLocalChecked());
@@ -508,6 +509,8 @@ public:
     screenSize->Set("width"_n, Nan::New(sizeIn.width()));
     screenSize->Set("height"_n, Nan::New(sizeIn.height()));
     res->Set("screenshotSize"_n, screenSize);
+    std::vector<uint8_t> buffer = m_Game->screenshotData();
+    res->Set("screenshot"_n, v8::ArrayBuffer::New(isolate, &buffer[0], buffer.size(), v8::ArrayBufferCreationMode::kExternalized));
 
     v8::Local<v8::Value> argv[] = {
       Nan::Null(),

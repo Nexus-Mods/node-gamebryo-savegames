@@ -482,7 +482,12 @@ public:
   }
 
   void Execute() {
-    m_Game = new GamebryoSaveGame(m_FilePath);
+    try {
+      m_Game = new GamebryoSaveGame(m_FilePath);
+    }
+    catch (const std::exception &err) {
+      SetErrorMessage(err.what());
+    }
   }
 
   void HandleOKCallback() {

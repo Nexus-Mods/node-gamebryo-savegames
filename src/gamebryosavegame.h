@@ -111,6 +111,8 @@ private:
       }
     }
 
+    void readBString(std::string &value);
+
     uint64_t tell()
     {
       return m_Decoder->tell();
@@ -131,7 +133,7 @@ private:
     void readImage(unsigned long width, unsigned long height, bool alpha = false);
 
     /* Read the plugin list */
-    void readPlugins();
+    void readPlugins(bool bStrings = false);
 
     /* Read the list of light plugins */
     void readLightPlugins();

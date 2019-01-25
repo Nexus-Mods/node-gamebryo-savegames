@@ -168,7 +168,7 @@ void GamebryoSaveGame::readOblivion(GamebryoSaveGame::FileWrapper &file)
 
   file.readImage();
 
-  file.readPlugins();
+  file.readPlugins(true);
 }
 
 void GamebryoSaveGame::readSkyrim(GamebryoSaveGame::FileWrapper &file)
@@ -350,6 +350,18 @@ void GamebryoSaveGame::FileWrapper::setBZString(bool state)
   m_BZString = state;
 }
 
+void GamebryoSaveGame::FileWrapper::readBString(std::string &value)
+{
+  unsigned char length;
+  read(length);
+  std::string buffer;
+  buffer.resize(length);
+  read(&buffer[0], length);
+
+  value = buffer;
+}
+
+
 template <> void GamebryoSaveGame::FileWrapper::read(std::string &value)
 {
   unsigned short length;
@@ -439,13 +451,18 @@ void GamebryoSaveGame::FileWrapper::readImage(unsigned long width, unsigned long
   }
 }
 
-void GamebryoSaveGame::FileWrapper::readPlugins()
+void GamebryoSaveGame::FileWrapper::readPlugins(bool bStrings)
 {
   unsigned char count;
   read(count);
   for (std::size_t i = 0; i < count; ++i) {
     std::string name;
-    read(name);
+    if (bStrings) {
+      readBString(name);
+    }
+    else {
+      read(name);
+    }
     m_Game->m_Plugins.push_back(name);
   }
 }

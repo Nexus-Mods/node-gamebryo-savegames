@@ -75,8 +75,9 @@ private:
   std::istringstream m_Buffer;
 };
 
-GamebryoSaveGame::GamebryoSaveGame(const std::string &fileName)
- : m_FileName(fileName)
+GamebryoSaveGame::GamebryoSaveGame(const std::string &fileName, bool quick)
+ : m_QuickRead(quick)
+ , m_FileName(fileName)
  , m_CreationTime(0)
 {
   {
@@ -162,6 +163,7 @@ void GamebryoSaveGame::readOblivion(GamebryoSaveGame::FileWrapper &file)
   timeStruct.tm_sec = winTime.wSecond; 
   m_CreationTime = mktime(&timeStruct);
 
+  if (!m_QuickRead) {
   //Note that screenshot size, width, height and data are apparently the same
   //structure
   file.skip<unsigned long>(); //Screenshot size.
@@ -169,6 +171,7 @@ void GamebryoSaveGame::readOblivion(GamebryoSaveGame::FileWrapper &file)
   file.readImage();
 
   file.readPlugins(true);
+}
 }
 
 void GamebryoSaveGame::readSkyrim(GamebryoSaveGame::FileWrapper &file)
@@ -199,10 +202,12 @@ void GamebryoSaveGame::readSkyrim(GamebryoSaveGame::FileWrapper &file)
   file.read(ftime);
   m_CreationTime = windowsTicksToEpoch(ftime);
 
+  if (!m_QuickRead) {
   if (version < 0x0c) {
     // original skyrim format
     file.readImage();
-  } else {
+    }
+    else {
     // Skyrim SE - same header, different version
     unsigned long width;
     file.read(width);
@@ -229,6 +234,7 @@ void GamebryoSaveGame::readSkyrim(GamebryoSaveGame::FileWrapper &file)
   if (formVersion >= 0x4e) {
     file.readLightPlugins();
   }
+}
 }
 
 void GamebryoSaveGame::readFO3(GamebryoSaveGame::FileWrapper &file)
@@ -277,11 +283,13 @@ void GamebryoSaveGame::readFO3(GamebryoSaveGame::FileWrapper &file)
   std::string playtime;
   file.read(playtime);
 
+  if (!m_QuickRead) {
   file.readImage(width, height);
 
   file.skip<char>(5); // unknown byte, size of plugin data
 
   file.readPlugins();
+}
 }
 
 void GamebryoSaveGame::readFO4(GamebryoSaveGame::FileWrapper &file)
@@ -307,6 +315,8 @@ void GamebryoSaveGame::readFO4(GamebryoSaveGame::FileWrapper &file)
   uint64_t ftime;
   file.read(ftime);
   m_CreationTime = windowsTicksToEpoch(ftime);
+  
+  if (!m_QuickRead) {
   file.readImage(true);
 
   uint8_t formVersion;
@@ -320,6 +330,7 @@ void GamebryoSaveGame::readFO4(GamebryoSaveGame::FileWrapper &file)
     // lazy: just read the esls into the existing plugin list
     file.readLightPlugins();
   }
+}
 }
 
 GamebryoSaveGame::FileWrapper::FileWrapper(GamebryoSaveGame *game)
@@ -488,9 +499,10 @@ void GamebryoSaveGame::FileWrapper::setCompression(unsigned short format, unsign
 
 class LoadWorker : public Nan::AsyncWorker {
 public:
-  LoadWorker(const std::string &filePath, Nan::Callback *appCallback)
+  LoadWorker(const std::string &filePath, bool quick, Nan::Callback *appCallback)
     : Nan::AsyncWorker(appCallback)
     , m_FilePath(filePath)
+    , m_Quick(quick)
     , m_Game(nullptr)
   {}
 
@@ -528,12 +540,23 @@ public:
 
     Dimensions sizeIn = m_Game->screenshotSize();
     v8::Local<v8::Object> screenSize = Nan::New<v8::Object>();
+    if (m_Quick) {
+      screenSize->Set("width"_n, Nan::New(0));
+      screenSize->Set("height"_n, Nan::New(0));
+    }
+    else {
     screenSize->Set("width"_n, Nan::New(sizeIn.width()));
     screenSize->Set("height"_n, Nan::New(sizeIn.height()));
+    }
     res->Set("screenshotSize"_n, screenSize);
+    if (m_Quick) {
+      res->Set("screenshot"_n, Nan::Null());
+    }
+    else {
     std::vector<uint8_t> buffer = m_Game->screenshotData();
     auto temp = v8::ArrayBuffer::New(isolate, &buffer[0], buffer.size(), v8::ArrayBufferCreationMode::kExternalized);
     res->Set("screenshot"_n, v8::Uint8ClampedArray::New(temp, 0, temp->ByteLength()));
+    }
 
     v8::Local<v8::Value> argv[] = {
       Nan::Null(),
@@ -546,12 +569,13 @@ public:
 private:
 
   std::string m_FilePath;
+  bool m_Quick;
   GamebryoSaveGame *m_Game;
 
 };
 
-void create(const std::string & fileName, nbind::cbFunction callback) {
+void create(const std::string &fileName, bool quick, nbind::cbFunction callback) {
   Nan::AsyncQueueWorker(
-    new LoadWorker(fileName, new Nan::Callback(callback.getJsFunction())));
+    new LoadWorker(fileName, quick, new Nan::Callback(callback.getJsFunction())));
 }
 

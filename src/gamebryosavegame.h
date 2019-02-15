@@ -42,12 +42,12 @@ public:
   virtual bool read(char *buffer, size_t size) = 0;
 };
 
-void create(const std::string &fileName, nbind::cbFunction callback);
+void create(const std::string &fileName, bool quick, nbind::cbFunction callback);
 
 class GamebryoSaveGame
 {
 public:
-  GamebryoSaveGame(const std::string &fileName);
+  GamebryoSaveGame(const std::string &fileName, bool quick);
 
   virtual ~GamebryoSaveGame();
 
@@ -155,6 +155,7 @@ private:
 
 private:
 
+  bool m_QuickRead;
   std::string m_FileName;
   std::string m_PCName;
   uint16_t m_PCLevel;
@@ -179,7 +180,7 @@ NBIND_CLASS(Dimensions) {
 }
 
 NBIND_CLASS(GamebryoSaveGame) {
-  construct<std::string>();
+  construct<std::string, bool>();
   getter(characterName);
   getter(characterLevel);
   getter(location);

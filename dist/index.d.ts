@@ -22,7 +22,7 @@ declare module 'gamebryo-savegame' {
   interface Lib {
     Dimensions: Dimensions;
     GamebryoSaveGame: GamebryoSaveGame;
-    create: (filePath: string, callback: (err: Error, save: GamebryoSaveGame) => void) => void;
+    create: (filePath: string, quick: boolean, callback: (err: Error, save: GamebryoSaveGame) => void) => void;
   }
 
   function init(subpath: string): Lib;

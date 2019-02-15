@@ -19,13 +19,31 @@ uint32_t windowsTicksToEpoch(int64_t windowsTicks)
   return static_cast<uint32_t>(windowsTicks / WINDOWS_TICK - SEC_TO_UNIX_EPOCH);
 }
 
+class MoreInfoException : public std::exception {
+public:
+  MoreInfoException(const char *message, const char *syscall, const std::string &fileName, int code)
+    : std::exception(message)
+    , m_SysCall(syscall)
+    , m_FileName(fileName)
+    , m_ErrorCode(code)
+  {}
+
+  std::string fileName() const { return m_FileName; }
+  std::string syscall() const { return m_SysCall; }
+  int errorCode() const { return m_ErrorCode; }
+private:
+  std::string m_FileName;
+  std::string m_SysCall;
+  int m_ErrorCode;
+};
+
 class DirectDecoder : public IDecoder {
 public:
   DirectDecoder(const std::string &fileName)
     : m_File(toWC(fileName.c_str(), CodePage::UTF8, fileName.length()).c_str(), std::ios::in | std::ios::binary)
   {
     if (!m_File.is_open()) {
-      throw std::runtime_error(fmt::format("failed to open {}", fileName));
+      throw MoreInfoException(strerror(errno), "open", fileName, errno);
     }
   }
 
@@ -164,14 +182,14 @@ void GamebryoSaveGame::readOblivion(GamebryoSaveGame::FileWrapper &file)
   m_CreationTime = mktime(&timeStruct);
 
   if (!m_QuickRead) {
-  //Note that screenshot size, width, height and data are apparently the same
-  //structure
-  file.skip<unsigned long>(); //Screenshot size.
+    //Note that screenshot size, width, height and data are apparently the same
+    //structure
+    file.skip<unsigned long>(); //Screenshot size.
 
-  file.readImage();
+    file.readImage();
 
-  file.readPlugins(true);
-}
+    file.readPlugins(true);
+  }
 }
 
 void GamebryoSaveGame::readSkyrim(GamebryoSaveGame::FileWrapper &file)
@@ -203,38 +221,38 @@ void GamebryoSaveGame::readSkyrim(GamebryoSaveGame::FileWrapper &file)
   m_CreationTime = windowsTicksToEpoch(ftime);
 
   if (!m_QuickRead) {
-  if (version < 0x0c) {
-    // original skyrim format
-    file.readImage();
+    if (version < 0x0c) {
+      // original skyrim format
+      file.readImage();
     }
     else {
-    // Skyrim SE - same header, different version
-    unsigned long width;
-    file.read(width);
-    unsigned long height;
-    file.read(height);
-    unsigned short compressionFormat;
-    file.read(compressionFormat);
+      // Skyrim SE - same header, different version
+      unsigned long width;
+      file.read(width);
+      unsigned long height;
+      file.read(height);
+      unsigned short compressionFormat;
+      file.read(compressionFormat);
 
-    file.readImage(width, height, true);
+      file.readImage(width, height, true);
 
-    // the rest of the file is compressed in Skyrim SE
-    unsigned long compressed, uncompressed;
-    file.read(uncompressed);
-    file.read(compressed);
+      // the rest of the file is compressed in Skyrim SE
+      unsigned long compressed, uncompressed;
+      file.read(uncompressed);
+      file.read(compressed);
 
-    file.setCompression(compressionFormat, compressed, uncompressed);
+      file.setCompression(compressionFormat, compressed, uncompressed);
+    }
+
+    unsigned char formVersion;
+    file.read(formVersion); // form version
+    file.skip<unsigned long>(); // plugin info size
+    file.readPlugins();
+
+    if (formVersion >= 0x4e) {
+      file.readLightPlugins();
+    }
   }
-
-  unsigned char formVersion;
-  file.read(formVersion); // form version
-  file.skip<unsigned long>(); // plugin info size
-  file.readPlugins();
-
-  if (formVersion >= 0x4e) {
-    file.readLightPlugins();
-  }
-}
 }
 
 void GamebryoSaveGame::readFO3(GamebryoSaveGame::FileWrapper &file)
@@ -284,12 +302,12 @@ void GamebryoSaveGame::readFO3(GamebryoSaveGame::FileWrapper &file)
   file.read(playtime);
 
   if (!m_QuickRead) {
-  file.readImage(width, height);
+    file.readImage(width, height);
 
-  file.skip<char>(5); // unknown byte, size of plugin data
+    file.skip<char>(5); // unknown byte, size of plugin data
 
-  file.readPlugins();
-}
+    file.readPlugins();
+  }
 }
 
 void GamebryoSaveGame::readFO4(GamebryoSaveGame::FileWrapper &file)
@@ -317,20 +335,20 @@ void GamebryoSaveGame::readFO4(GamebryoSaveGame::FileWrapper &file)
   m_CreationTime = windowsTicksToEpoch(ftime);
   
   if (!m_QuickRead) {
-  file.readImage(true);
+    file.readImage(true);
 
-  uint8_t formVersion;
-  file.read(formVersion);
-  file.read(ignore);          // game version
-  file.skip<uint32_t>(); // plugin info size
+    uint8_t formVersion;
+    file.read(formVersion);
+    file.read(ignore);          // game version
+    file.skip<uint32_t>(); // plugin info size
 
-  file.readPlugins();
+    file.readPlugins();
 
-  if (formVersion >= 0x44) {
-    // lazy: just read the esls into the existing plugin list
-    file.readLightPlugins();
+    if (formVersion >= 0x44) {
+      // lazy: just read the esls into the existing plugin list
+      file.readLightPlugins();
+    }
   }
-}
 }
 
 GamebryoSaveGame::FileWrapper::FileWrapper(GamebryoSaveGame *game)
@@ -512,7 +530,13 @@ public:
 
   void Execute() {
     try {
-      m_Game = new GamebryoSaveGame(m_FilePath);
+      m_Game = new GamebryoSaveGame(m_FilePath, m_Quick);
+    }
+    catch (const MoreInfoException &err) {
+      m_ErrorFileName = err.fileName();
+      m_ErrorSysCall = err.syscall();
+      m_ErrorCode = err.errorCode();
+      SetErrorMessage(err.what());
     }
     catch (const std::exception &err) {
       SetErrorMessage(err.what());
@@ -545,17 +569,17 @@ public:
       screenSize->Set("height"_n, Nan::New(0));
     }
     else {
-    screenSize->Set("width"_n, Nan::New(sizeIn.width()));
-    screenSize->Set("height"_n, Nan::New(sizeIn.height()));
+      screenSize->Set("width"_n, Nan::New(sizeIn.width()));
+      screenSize->Set("height"_n, Nan::New(sizeIn.height()));
     }
     res->Set("screenshotSize"_n, screenSize);
     if (m_Quick) {
       res->Set("screenshot"_n, Nan::Null());
     }
     else {
-    std::vector<uint8_t> buffer = m_Game->screenshotData();
-    auto temp = v8::ArrayBuffer::New(isolate, &buffer[0], buffer.size(), v8::ArrayBufferCreationMode::kExternalized);
-    res->Set("screenshot"_n, v8::Uint8ClampedArray::New(temp, 0, temp->ByteLength()));
+      std::vector<uint8_t> buffer = m_Game->screenshotData();
+      auto temp = v8::ArrayBuffer::New(isolate, &buffer[0], buffer.size(), v8::ArrayBufferCreationMode::kExternalized);
+      res->Set("screenshot"_n, v8::Uint8ClampedArray::New(temp, 0, temp->ByteLength()));
     }
 
     v8::Local<v8::Value> argv[] = {
@@ -563,13 +587,25 @@ public:
       res,
     };
 
-    callback->Call(2, argv);
+    callback->Call(2, argv, async_resource);
+  }
+
+  virtual void HandleErrorCallback() {
+    Nan::HandleScope scope;
+    
+    v8::Local<v8::Value> argv[] = {
+      Nan::ErrnoException(m_ErrorCode, m_ErrorSysCall.c_str(), ErrorMessage(), m_ErrorFileName.c_str())
+    };
+    callback->Call(1, argv, async_resource);
   }
 
 private:
 
   std::string m_FilePath;
   bool m_Quick;
+  std::string m_ErrorFileName;
+  std::string m_ErrorSysCall;
+  int m_ErrorCode;
   GamebryoSaveGame *m_Game;
 
 };

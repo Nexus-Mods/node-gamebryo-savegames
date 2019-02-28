@@ -577,8 +577,10 @@ public:
       res->Set("screenshot"_n, Nan::Null());
     }
     else {
-      std::vector<uint8_t> buffer = m_Game->screenshotData();
-      auto temp = v8::ArrayBuffer::New(isolate, &buffer[0], buffer.size(), v8::ArrayBufferCreationMode::kExternalized);
+      const std::vector<uint8_t> &screenshot = m_Game->screenshotData();
+      uint8_t *buffer = (uint8_t*)isolate->GetArrayBufferAllocator()->Allocate(screenshot.size());
+      memcpy(buffer, screenshot.data(), screenshot.size());
+      auto temp = v8::ArrayBuffer::New(isolate, buffer, screenshot.size(), v8::ArrayBufferCreationMode::kInternalized);
       res->Set("screenshot"_n, v8::Uint8ClampedArray::New(temp, 0, temp->ByteLength()));
     }
 

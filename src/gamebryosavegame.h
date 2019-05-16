@@ -8,6 +8,13 @@
 #include "fmt/format.h"
 #include "nbind/nbind.h"
 
+class DataInvalid : public std::runtime_error {
+public:
+  DataInvalid(const char* message, size_t offset) : std::runtime_error(message), m_Offset(offset) {}
+  size_t offset() const { return m_Offset; }
+private:
+  size_t m_Offset;
+};
 
 /**
  * Stores a screenshot in 32-bit rgba format
@@ -17,7 +24,8 @@
 class Dimensions
 {
 public:
-  Dimensions() {}
+  Dimensions()
+    : m_Width(0), m_Height(0) {}
 
   Dimensions(uint32_t width, uint32_t height)
     : m_Width(width), m_Height(height) {}
@@ -107,7 +115,9 @@ private:
         throw std::runtime_error(fmt::format("unexpected end of file at {} (read of {} bytes)", m_Decoder->tell(), sizeof(T)).c_str());
       }
       if (m_HasFieldMarkers) {
-        skip<char>();
+        char marker;
+        m_Decoder->read(&marker, 1);
+        sanityCheck(marker == '|', "Expected field separator");
       }
     }
 
@@ -140,6 +150,8 @@ private:
 
     /* treat the following bytes as compressed */
     void setCompression(unsigned short format, unsigned long compressedSize, unsigned long uncompressedSize);
+
+    void sanityCheck(bool conditionMatch, const char* message);
 
   private:
     GamebryoSaveGame *m_Game;

@@ -8,6 +8,7 @@
 #include <sstream>
 #include <nbind/nbind.h>
 #include <lz4.h>
+#include <iostream>
 
 uint32_t windowsTicksToEpoch(int64_t windowsTicks)
 {
@@ -96,6 +97,8 @@ private:
 GamebryoSaveGame::GamebryoSaveGame(const std::string &fileName, bool quick)
  : m_QuickRead(quick)
  , m_FileName(fileName)
+ , m_PCLevel(0)
+ , m_SaveNumber()
  , m_CreationTime(0)
 {
   {
@@ -411,7 +414,9 @@ template <> void GamebryoSaveGame::FileWrapper::read(std::string &value)
     }
 
     if (m_HasFieldMarkers) {
-      skip<char>();
+      char sep;
+      m_Decoder->read(&sep, 1);
+      sanityCheck(sep == '|', "Expected field separator");
     }
   }
 
@@ -438,10 +443,8 @@ void GamebryoSaveGame::FileWrapper::readImage(bool alpha)
 void GamebryoSaveGame::FileWrapper::readImage(unsigned long width, unsigned long height, bool alpha)
 {
   // sanity check to prevent us from trying to open a ridiculously large buffer for the image
-  if ((width > 2000) || (height > 2000)) {
-    NBIND_ERR("Invalid image dimensions");
-    return;
-  }
+  sanityCheck(width < 2000, "invalid width");
+  sanityCheck(height < 2000, "invalid height");
 
   int bpp = alpha ? 4 : 3;
 
@@ -492,6 +495,7 @@ void GamebryoSaveGame::FileWrapper::readPlugins(bool bStrings)
     else {
       read(name);
     }
+    sanityCheck(name.length() <= 256, "Invalid plugin name");
     m_Game->m_Plugins.push_back(name);
   }
 }
@@ -503,6 +507,7 @@ void GamebryoSaveGame::FileWrapper::readLightPlugins()
   for (std::size_t i = 0; i < count; ++i) {
     std::string name;
     read(name);
+    sanityCheck(name.length() <= 256, "Invalid light plugin name");
     m_Game->m_Plugins.push_back(name);
   }
 }
@@ -514,6 +519,13 @@ void GamebryoSaveGame::FileWrapper::setCompression(unsigned short format, unsign
     m_Decoder.reset(new LZ4Decoder(m_Decoder, compressedSize, uncompressedSize));
   }
 }
+
+void GamebryoSaveGame::FileWrapper::sanityCheck(bool conditionMatch, const char* message) {
+  if (!conditionMatch) {
+    throw DataInvalid(message, m_Decoder->tell());
+  }
+}
+
 
 class LoadWorker : public Nan::AsyncWorker {
 public:
@@ -537,6 +549,10 @@ public:
       m_ErrorSysCall = err.syscall();
       m_ErrorCode = err.errorCode();
       SetErrorMessage(err.what());
+    }
+    catch (const DataInvalid &err) {
+      SetErrorMessage(err.what());
+      m_ErrorPos = err.offset();
     }
     catch (const std::exception &err) {
       SetErrorMessage(err.what());
@@ -578,10 +594,9 @@ public:
     }
     else {
       const std::vector<uint8_t> &screenshot = m_Game->screenshotData();
-      uint8_t *buffer = (uint8_t*)isolate->GetArrayBufferAllocator()->Allocate(screenshot.size());
-      memcpy(buffer, screenshot.data(), screenshot.size());
-      auto temp = v8::ArrayBuffer::New(isolate, buffer, screenshot.size(), v8::ArrayBufferCreationMode::kInternalized);
-      res->Set("screenshot"_n, v8::Uint8ClampedArray::New(temp, 0, temp->ByteLength()));
+      auto buffer = v8::ArrayBuffer::New(isolate, screenshot.size());
+      memcpy(buffer->GetContents().Data(), screenshot.data(), screenshot.size());
+      res->Set("screenshot"_n, v8::Uint8ClampedArray::New(buffer, 0, buffer->ByteLength()));
     }
 
     v8::Local<v8::Value> argv[] = {
@@ -594,10 +609,21 @@ public:
 
   virtual void HandleErrorCallback() {
     Nan::HandleScope scope;
-    
-    v8::Local<v8::Value> argv[] = {
-      Nan::ErrnoException(m_ErrorCode, m_ErrorSysCall.c_str(), ErrorMessage(), m_ErrorFileName.c_str())
-    };
+
+    v8::Local<v8::Value> ex;
+
+    if (m_ErrorCode != 0) {
+      ex = Nan::ErrnoException(m_ErrorCode, m_ErrorSysCall.c_str(), ErrorMessage(), m_ErrorFileName.c_str());
+    }
+    else {
+      v8::Local<v8::Value> temp = Nan::Error(Nan::New(ErrorMessage()).ToLocalChecked());
+      if (m_ErrorPos != 0) {
+        temp->ToObject()->Set("offset"_n, Nan::New(static_cast<uint32_t>(m_ErrorPos)));
+      }
+      ex = temp;
+    }
+
+    v8::Local<v8::Value> argv[] = { ex };
     callback->Call(1, argv, async_resource);
   }
 
@@ -607,7 +633,8 @@ private:
   bool m_Quick;
   std::string m_ErrorFileName;
   std::string m_ErrorSysCall;
-  int m_ErrorCode;
+  int m_ErrorCode{0};
+  size_t m_ErrorPos{0};
   GamebryoSaveGame *m_Game;
 
 };

@@ -60,6 +60,9 @@ public:
     return static_cast<bool>(m_File.read(buffer, size));
   }
 
+  virtual void clear() {
+    m_File.clear();
+  }
 private:
   std::ifstream m_File;
 };
@@ -90,6 +93,9 @@ public:
     return static_cast<bool>(m_Buffer.read(buffer, size));
   }
 
+  virtual void clear() {
+    m_Buffer.clear();
+  }
 private:
   std::istringstream m_Buffer;
 };
@@ -427,7 +433,9 @@ template <> void GamebryoSaveGame::FileWrapper::read(std::string &value)
 void GamebryoSaveGame::FileWrapper::read(void *buff, std::size_t length)
 {
   if (!m_Decoder->read(static_cast<char *>(buff), length)) {
-    throw std::runtime_error(fmt::format("unexpected end of file at {} (read of {} bytes)", m_Decoder->tell(), length).c_str());
+    m_Decoder->clear();
+    m_Decoder->seek(0, std::ios::end);
+    throw std::runtime_error(fmt::format("xyz unexpected end of file at \"{}\" (read of \"{}\" bytes)", m_Decoder->tell(), length).c_str());
   }
 }
 

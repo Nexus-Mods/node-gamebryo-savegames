@@ -48,6 +48,7 @@ public:
   virtual bool seek(size_t offset, std::ios_base::seekdir dir = std::ios::beg) = 0;
   virtual size_t tell() = 0;
   virtual bool read(char *buffer, size_t size) = 0;
+  virtual void clear() = 0;
 };
 
 void create(const std::string &fileName, bool quick, nbind::cbFunction callback);
@@ -105,14 +106,18 @@ private:
     template <typename T> void skip(int count = 1)
     {
       if (!m_Decoder->seek(count * sizeof(T), std::ios::cur)) {
-        throw std::runtime_error(fmt::format("unexpected end of file at {} (skip of {} bytes)", m_Decoder->tell(), count * sizeof(T)).c_str());
+        m_Decoder->clear();
+        m_Decoder->seek(0, std::ios::end);
+        throw std::runtime_error(fmt::format("unexpected end of file at \"{}\" (skip of \"{}\" bytes)", m_Decoder->tell(), count * sizeof(T)).c_str());
       }
     }
 
     template <typename T> void read(T &value)
     {
       if (!m_Decoder->read(reinterpret_cast<char*>(&value), sizeof(T))) {
-        throw std::runtime_error(fmt::format("unexpected end of file at {} (read of {} bytes)", m_Decoder->tell(), sizeof(T)).c_str());
+        m_Decoder->clear();
+        m_Decoder->seek(0, std::ios::end);
+        throw std::runtime_error(fmt::format("unexpected end of file at \"{}\" (read of \"{}\" bytes)", m_Decoder->tell(), sizeof(T)).c_str());
       }
       if (m_HasFieldMarkers) {
         char marker;

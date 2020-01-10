@@ -521,8 +521,8 @@ nan@^2.9.2:
   integrity sha512-INOFj37C7k3AfaNTtX8RhsTw7qRy7eLET14cROi9+5HAVbbHuIWUHEauBv5qT4Av2tWasiTY1Jw6puUNqRJXQg==
 
 nbind@TanninOne/nbind:
-  version "0.3.19"
-  resolved "https://codeload.github.com/TanninOne/nbind/tar.gz/9a12ef96f0b0ea78c7144c4f58c74e284cfd2a36"
+  version "0.3.20"
+  resolved "https://codeload.github.com/TanninOne/nbind/tar.gz/8770f3feeb3b120bd1fb0232decbbf11a476a58d"
   dependencies:
     emscripten-library-decorator "~0.2.2"
     mkdirp "~0.5.1"

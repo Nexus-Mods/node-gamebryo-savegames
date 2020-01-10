@@ -569,42 +569,43 @@ public:
 
   void HandleOKCallback() {
     Nan::HandleScope scope;
-    v8::Isolate* isolate = v8::Isolate::GetCurrent();
+    v8::Local<v8::Context> context = Nan::GetCurrentContext();
+    v8::Isolate* isolate = context->GetIsolate();
 
     v8::Local<v8::Object> res = Nan::New<v8::Object>();
-    res->Set("fileName"_n, Nan::New(m_Game->fileName().c_str()).ToLocalChecked());
-    res->Set("characterLevel"_n, Nan::New(m_Game->characterLevel()));
-    res->Set("characterName"_n, Nan::New(m_Game->characterName().c_str()).ToLocalChecked());
-    res->Set("creationTime"_n, Nan::New(m_Game->creationTime()));
-    res->Set("location"_n, Nan::New(m_Game->location().c_str()).ToLocalChecked());
-    res->Set("saveNumber"_n, Nan::New(m_Game->saveNumber()));
+    res->Set(context, "fileName"_n, Nan::New(m_Game->fileName().c_str()).ToLocalChecked());
+    res->Set(context, "characterLevel"_n, Nan::New(m_Game->characterLevel()));
+    res->Set(context, "characterName"_n, Nan::New(m_Game->characterName().c_str()).ToLocalChecked());
+    res->Set(context, "creationTime"_n, Nan::New(m_Game->creationTime()));
+    res->Set(context, "location"_n, Nan::New(m_Game->location().c_str()).ToLocalChecked());
+    res->Set(context, "saveNumber"_n, Nan::New(m_Game->saveNumber()));
 
     v8::Local<v8::Array> plugins = Nan::New<v8::Array>();
     std::vector<std::string> pluginsIn = m_Game->plugins();
     for (int i = 0; i < pluginsIn.size(); ++i) {
-      plugins->Set(i, Nan::New(pluginsIn[i]).ToLocalChecked());
+      plugins->Set(context, i, Nan::New(pluginsIn[i]).ToLocalChecked());
     }
-    res->Set("plugins"_n, plugins);
+    res->Set(context, "plugins"_n, plugins);
 
     Dimensions sizeIn = m_Game->screenshotSize();
     v8::Local<v8::Object> screenSize = Nan::New<v8::Object>();
     if (m_Quick) {
-      screenSize->Set("width"_n, Nan::New(0));
-      screenSize->Set("height"_n, Nan::New(0));
+      screenSize->Set(context, "width"_n, Nan::New(0));
+      screenSize->Set(context, "height"_n, Nan::New(0));
     }
     else {
-      screenSize->Set("width"_n, Nan::New(sizeIn.width()));
-      screenSize->Set("height"_n, Nan::New(sizeIn.height()));
+      screenSize->Set(context, "width"_n, Nan::New(sizeIn.width()));
+      screenSize->Set(context, "height"_n, Nan::New(sizeIn.height()));
     }
-    res->Set("screenshotSize"_n, screenSize);
+    res->Set(context, "screenshotSize"_n, screenSize);
     if (m_Quick) {
-      res->Set("screenshot"_n, Nan::Null());
+      res->Set(context, "screenshot"_n, Nan::Null());
     }
     else {
       const std::vector<uint8_t> &screenshot = m_Game->screenshotData();
       auto buffer = v8::ArrayBuffer::New(isolate, screenshot.size());
       memcpy(buffer->GetContents().Data(), screenshot.data(), screenshot.size());
-      res->Set("screenshot"_n, v8::Uint8ClampedArray::New(buffer, 0, buffer->ByteLength()));
+      res->Set(context, "screenshot"_n, v8::Uint8ClampedArray::New(buffer, 0, buffer->ByteLength()));
     }
 
     v8::Local<v8::Value> argv[] = {

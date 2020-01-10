@@ -1,3 +1,5 @@
+Object.defineProperty(exports, "__esModule", { value: true });
+
 let nbind = require('nbind');
 let path = require('path');
 

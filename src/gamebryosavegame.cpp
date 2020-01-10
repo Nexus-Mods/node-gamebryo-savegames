@@ -624,9 +624,10 @@ public:
       ex = Nan::ErrnoException(m_ErrorCode, m_ErrorSysCall.c_str(), ErrorMessage(), m_ErrorFileName.c_str());
     }
     else {
+      v8::Local<v8::Context> context = Nan::GetCurrentContext();
       v8::Local<v8::Value> temp = Nan::Error(Nan::New(ErrorMessage()).ToLocalChecked());
       if (m_ErrorPos != 0) {
-        temp->ToObject()->Set("offset"_n, Nan::New(static_cast<uint32_t>(m_ErrorPos)));
+        temp->ToObject(context).ToLocalChecked()->Set(context, "offset"_n, Nan::New(static_cast<uint32_t>(m_ErrorPos)));
       }
       ex = temp;
     }

@@ -515,18 +515,18 @@ mkdirp@^0.5.0, mkdirp@^0.5.1, mkdirp@~0.5.1:
   dependencies:
     minimist "0.0.8"
 
-nan@^2.9.2:
+nan@^2.14.0:
   version "2.14.0"
   resolved "https://registry.yarnpkg.com/nan/-/nan-2.14.0.tgz#7818f722027b2459a86f0295d434d1fc2336c52c"
   integrity sha512-INOFj37C7k3AfaNTtX8RhsTw7qRy7eLET14cROi9+5HAVbbHuIWUHEauBv5qT4Av2tWasiTY1Jw6puUNqRJXQg==
 
 nbind@TanninOne/nbind:
-  version "0.3.20"
-  resolved "https://codeload.github.com/TanninOne/nbind/tar.gz/8770f3feeb3b120bd1fb0232decbbf11a476a58d"
+  version "0.3.22"
+  resolved "https://codeload.github.com/TanninOne/nbind/tar.gz/3c333d71760bb4c55556a63b88a054db0d59a2eb"
   dependencies:
     emscripten-library-decorator "~0.2.2"
     mkdirp "~0.5.1"
-    nan "^2.9.2"
+    nan "^2.14.0"
 
 node-fetch@2.6.0:
   version "2.6.0"

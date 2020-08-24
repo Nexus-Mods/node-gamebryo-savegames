@@ -15,6 +15,7 @@ declare module 'gamebryo-savegame' {
     creationTime: number;
     fileName: string;
     screenshotSize: Dimensions;
+    playTime: string;
     getScreenshot?: () => any;
     screenshot?: any;
   }

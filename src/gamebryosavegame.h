@@ -70,6 +70,7 @@ public:
   uint32_t saveNumber() const { return m_SaveNumber; }
   std::vector<std::string> plugins() const { return m_Plugins; }
   Dimensions screenshotSize() const { return m_ScreenshotDim; }
+  std::string playTime() const { return m_Playtime; }
   
   void getScreenshot(nbind::Buffer buffer) const {
     uint8_t *outData = buffer.data();
@@ -182,6 +183,7 @@ private:
   std::string m_PCName;
   uint16_t m_PCLevel;
   std::string m_PCLocation;
+  std::string m_Playtime;
   uint32_t m_SaveNumber;
   uint32_t m_CreationTime;
   std::vector<std::string> m_Plugins;
@@ -211,6 +213,7 @@ NBIND_CLASS(GamebryoSaveGame) {
   getter(creationTime);
   getter(fileName);
   getter(screenshotSize);
+  getter(playTime);
   method(getScreenshot);
 }
 

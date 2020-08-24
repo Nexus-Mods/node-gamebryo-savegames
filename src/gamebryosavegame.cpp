@@ -213,7 +213,11 @@ void GamebryoSaveGame::readOblivion(GamebryoSaveGame::FileWrapper &file)
   file.read(m_PCLevel);
   file.read(m_PCLocation);
 
-  file.skip<float>(); //game days
+  float gameDays;
+  file.read(gameDays); //game days
+  m_Playtime =
+    std::to_string(static_cast<int>(floor(gameDays))) + " days, "
+    + std::to_string(static_cast<int>(static_cast<int>(gameDays * 24) % 24)) + " hours";
   file.skip<unsigned long>(); //game ticks
 
   WINSYSTEMTIME winTime;
@@ -253,8 +257,7 @@ void GamebryoSaveGame::readSkyrim(GamebryoSaveGame::FileWrapper &file)
 
   file.read(m_PCLocation);
 
-  std::string timeOfDay;
-  file.read(timeOfDay);
+  file.read(m_Playtime);
 
   std::string race;
   file.read(race); // race name (i.e. BretonRace)
@@ -344,8 +347,7 @@ void GamebryoSaveGame::readFO3(GamebryoSaveGame::FileWrapper &file)
 
   file.read(m_PCLocation);
 
-  std::string playtime;
-  file.read(playtime);
+  file.read(m_Playtime);
 
   if (!m_QuickRead) {
     file.readImage(width, height);
@@ -369,8 +371,8 @@ void GamebryoSaveGame::readFO4(GamebryoSaveGame::FileWrapper &file)
   m_PCLevel = static_cast<uint16_t>(temp);
   file.read(m_PCLocation);
 
+  file.read(m_Playtime);   // playtime as ascii hh.mm.ss
   std::string ignore;
-  file.read(ignore);   // playtime as ascii hh.mm.ss
   file.read(ignore);   // race name (i.e. BretonRace)
 
   file.skip<uint16_t>(); // Player gender (0 = male)

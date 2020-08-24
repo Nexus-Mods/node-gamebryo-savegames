@@ -1,7 +1,5 @@
 #include "gamebryosavegame.h"
 
-#include "string_cast.h"
-
 #include <stdexcept>
 #include <vector>
 #include <ctime>
@@ -100,6 +98,19 @@ private:
   std::istringstream m_Buffer;
 };
 
+bool isCharInRange(wchar_t ch, wchar_t low, wchar_t high) {
+  return ch >= low && ch <= high;
+}
+
+bool isCharCyrillic(wchar_t ch) {
+  // this doesn't cover all cyrillic characters in Unicode, only standard characters and "supplement", the rest is all over the place
+  return isCharInRange(ch, 0x400, 0x52F);
+}
+
+bool ignoreChar(wchar_t ch) {
+  return isCharInRange(ch, L'0', L'9') || (ch == L'-') || (ch == L'.') || (ch == L' ');
+}
+
 GamebryoSaveGame::GamebryoSaveGame(const std::string &fileName, bool quick)
  : m_QuickRead(quick)
  , m_FileName(fileName)
@@ -107,8 +118,9 @@ GamebryoSaveGame::GamebryoSaveGame(const std::string &fileName, bool quick)
  , m_SaveNumber()
  , m_CreationTime(0)
 {
+  CodePage encoding = determineEncoding(fileName);
   {
-    FileWrapper file(this);
+    FileWrapper file(this, encoding);
 
     bool found = false;
     for (auto hdr : {
@@ -157,6 +169,31 @@ struct WINSYSTEMTIME {
   uint16_t wSecond;
   uint16_t wMilliseconds;
 };
+
+CodePage GamebryoSaveGame::determineEncoding(const std::string &fileName) {
+  // determine code page based on file-name. Currently only supporting cyrillic
+  // This is a heuristic: if more than 50% of the file name (which is unicode) are cyrillic characters,
+  // we assume the file _content_ (which is single-byte characters) is in the corresponding code page
+#ifdef _WIN32
+  // pretty hacky way to reduce the file path to just the name without extension
+  size_t nameOffset = fileName.find_last_of("/\\");
+  nameOffset = nameOffset == std::string::npos ? 0 : nameOffset + 1;
+  std::wstring fileNameW = toWC(fileName.c_str() + nameOffset, CodePage::UTF8, fileName.size() - nameOffset - 4);
+
+  // filter out numbers and symbols that are identical across code pages anyway
+  std::wstring relevantChars;
+  std::copy_if(fileNameW.begin(), fileNameW.end(), std::back_inserter(relevantChars), [](wchar_t ch) { return !ignoreChar(ch); });
+
+  // determine percentage of cyrillic characters, if > 50%, assume the file is encoded cyrillic
+  int cyrillicChars = std::count_if(relevantChars.begin(), relevantChars.end(),
+    [](wchar_t ch) { return isCharCyrillic(ch); });
+
+  if ((cyrillicChars * 100) / relevantChars.length() > 50) {
+    return CodePage::CYRILLIC;
+  }
+#endif
+  return CodePage::LATIN1;
+}
 
 void GamebryoSaveGame::readOblivion(GamebryoSaveGame::FileWrapper &file)
 {
@@ -360,11 +397,12 @@ void GamebryoSaveGame::readFO4(GamebryoSaveGame::FileWrapper &file)
   }
 }
 
-GamebryoSaveGame::FileWrapper::FileWrapper(GamebryoSaveGame *game)
+GamebryoSaveGame::FileWrapper::FileWrapper(GamebryoSaveGame *game, CodePage encoding)
   : m_Game(game)
   , m_Decoder(new DirectDecoder(game->m_FileName))
   , m_HasFieldMarkers(false)
   , m_BZString(false)
+  , m_Encoding(encoding)
 {
 }
 
@@ -426,8 +464,7 @@ template <> void GamebryoSaveGame::FileWrapper::read(std::string &value)
     }
   }
 
-  // TODO: Need to convert from latin1 to utf8!
-  value = buffer;
+  value = toMB(toWC(buffer.c_str(), m_Encoding, length).c_str(), CodePage::UTF8, length);
 }
 
 void GamebryoSaveGame::FileWrapper::read(void *buff, std::size_t length)

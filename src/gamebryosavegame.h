@@ -8,6 +8,8 @@
 #include "fmt/format.h"
 #include "nbind/nbind.h"
 
+#include "string_cast.h"
+
 class DataInvalid : public std::runtime_error {
 public:
   DataInvalid(const char* message, size_t offset) : std::runtime_error(message), m_Offset(offset) {}
@@ -90,7 +92,7 @@ private:
     /** Construct the save file information.
      * @params expected - expect bytes at start of file
      **/
-    FileWrapper(GamebryoSaveGame *game);
+    FileWrapper(GamebryoSaveGame *game, CodePage encoding);
 
     /** Set this for save games that have a marker at the end of each
      * field. Specifically fallout
@@ -163,7 +165,10 @@ private:
     std::shared_ptr<IDecoder> m_Decoder;
     bool m_HasFieldMarkers;
     bool m_BZString;
+    CodePage m_Encoding;
   };
+
+  CodePage determineEncoding(const std::string &fileName);
 
   void readOblivion(FileWrapper &file);
   void readSkyrim(FileWrapper &file);

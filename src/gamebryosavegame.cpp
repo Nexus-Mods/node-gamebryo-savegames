@@ -616,6 +616,7 @@ public:
     res->Set(context, "characterLevel"_n, Nan::New(m_Game->characterLevel()));
     res->Set(context, "characterName"_n, Nan::New(m_Game->characterName().c_str()).ToLocalChecked());
     res->Set(context, "creationTime"_n, Nan::New(m_Game->creationTime()));
+    res->Set(context, "playTime"_n, Nan::New(m_Game->playTime().c_str()).ToLocalChecked());
     res->Set(context, "location"_n, Nan::New(m_Game->location().c_str()).ToLocalChecked());
     res->Set(context, "saveNumber"_n, Nan::New(m_Game->saveNumber()));
 

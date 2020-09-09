@@ -188,7 +188,8 @@ CodePage GamebryoSaveGame::determineEncoding(const std::string &fileName) {
   int cyrillicChars = std::count_if(relevantChars.begin(), relevantChars.end(),
     [](wchar_t ch) { return isCharCyrillic(ch); });
 
-  if ((cyrillicChars * 100) / relevantChars.length() > 50) {
+  if ((relevantChars.length() > 0)
+      && ((cyrillicChars * 100) / relevantChars.length() > 50)) {
     return CodePage::CYRILLIC;
   }
 #endif

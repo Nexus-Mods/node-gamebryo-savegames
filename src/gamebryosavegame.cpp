@@ -193,7 +193,9 @@ CodePage GamebryoSaveGame::determineEncoding(const std::string &fileName) {
     return CodePage::CYRILLIC;
   }
 #endif
-  return CodePage::LATIN1;
+  // the chinese version at least seems to use unicode.
+  // Just in case decoding as utf8 doesn't work, assume it's latin1
+  return CodePage::UTF8ORLATIN1;
 }
 
 void GamebryoSaveGame::readOblivion(GamebryoSaveGame::FileWrapper &file)
@@ -257,7 +259,6 @@ void GamebryoSaveGame::readSkyrim(GamebryoSaveGame::FileWrapper &file)
   m_PCLevel = static_cast<unsigned short>(temp);
 
   file.read(m_PCLocation);
-
   file.read(m_Playtime);
 
   std::string race;

@@ -7,7 +7,8 @@ enum class CodePage {
   LOCAL,
   LATIN1,
   CYRILLIC,
-  UTF8
+  UTF8,
+  UTF8ORLATIN1,
 };
 
 UINT windowsCP(CodePage codePage)
@@ -15,6 +16,7 @@ UINT windowsCP(CodePage codePage)
   switch (codePage) {
     case CodePage::LOCAL:    return CP_ACP;
     case CodePage::UTF8:     return CP_UTF8;
+    case CodePage::UTF8ORLATIN1:     return CP_UTF8;
     case CodePage::CYRILLIC: return 1251;
     case CodePage::LATIN1:   return 850;
   }
@@ -32,7 +34,15 @@ static std::wstring toWC(const char * const &source, CodePage codePage, size_t s
     // use utf8 or local 8-bit encoding depending on user choice
     UINT cp = windowsCP(codePage);
     // preflight to find out the required source size
-    int outLength = MultiByteToWideChar(cp, 0, source, static_cast<int>(sourceLength), &result[0], 0);
+    DWORD flags = 0;
+    if (codePage == CodePage::UTF8ORLATIN1) {
+      flags |= MB_ERR_INVALID_CHARS;
+    }
+    int outLength = MultiByteToWideChar(cp, flags, source, static_cast<int>(sourceLength), &result[0], 0);
+    if ((outLength == 0) && (::GetLastError() == ERROR_NO_UNICODE_TRANSLATION)) {
+      cp = 850;
+      outLength = MultiByteToWideChar(cp, 0, source, static_cast<int>(sourceLength), &result[0], 0);
+    }
     if (outLength == 0) {
       throw std::runtime_error("string conversion failed");
     }

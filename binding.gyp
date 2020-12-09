@@ -10,10 +10,12 @@
                 "src/fmt/format.cc"
             ],
             "include_dirs": [
-                "./lz4/include"
+                "./lz4/include",
+                "./zlib/include"
             ],
             "libraries": [
                 "-l../lz4/dll/liblz4",
+                "-l../zlib/lib/zlib",
                 "-DelayLoad:node.exe"
             ],
             "defines": [

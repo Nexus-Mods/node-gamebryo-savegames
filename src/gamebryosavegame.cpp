@@ -6,7 +6,9 @@
 #include <sstream>
 #include <nbind/nbind.h>
 #include <lz4.h>
+#include <zlib.h>
 #include <iostream>
+#include <fstream>
 
 uint32_t windowsTicksToEpoch(int64_t windowsTicks)
 {
@@ -76,6 +78,56 @@ public:
 
     wrapee->read(&tempCompressed[0], compressedSize);
     LZ4_decompress_safe(&tempCompressed[0], &tempUncompressed[0], compressedSize, uncompressedSize);
+    m_Buffer = std::istringstream(tempUncompressed);
+  }
+
+  virtual size_t tell() {
+    return m_Buffer.tellg();
+  }
+
+  virtual bool seek(size_t offset, std::ios_base::seekdir dir = std::ios::beg) {
+    return static_cast<bool>(m_Buffer.seekg(offset, dir));
+  }
+
+  virtual bool read(char *buffer, size_t size) {
+    return static_cast<bool>(m_Buffer.read(buffer, size));
+  }
+
+  virtual void clear() {
+    m_Buffer.clear();
+  }
+private:
+  std::istringstream m_Buffer;
+};
+
+class ZlibDecoder : public IDecoder {
+public:
+  ZlibDecoder(std::shared_ptr<IDecoder> &wrapee, unsigned long compressedSize, unsigned long uncompressedSize)
+  {
+    std::string tempCompressed;
+    tempCompressed.resize(compressedSize);
+
+    std::string tempUncompressed;
+    tempUncompressed.resize(uncompressedSize);
+
+    wrapee->read(&tempCompressed[0], compressedSize);
+
+    z_stream infstream;
+    infstream.zalloc = Z_NULL;
+    infstream.zfree = Z_NULL;
+    infstream.opaque = Z_NULL;
+    infstream.avail_in = compressedSize;
+    infstream.next_in = reinterpret_cast<Bytef*>(&tempCompressed[0]);
+    infstream.avail_out = uncompressedSize;
+    infstream.next_out = reinterpret_cast<Bytef*>(&tempUncompressed[0]);
+
+    int res = inflateInit(&infstream);
+    if (res != Z_OK) {
+      throw std::runtime_error("failed to initialize zlib inflate");
+    }
+    inflate(&infstream, Z_NO_FLUSH);
+    inflateEnd(&infstream);
+
     m_Buffer = std::istringstream(tempUncompressed);
   }
 
@@ -563,8 +615,9 @@ void GamebryoSaveGame::FileWrapper::readLightPlugins()
 
 void GamebryoSaveGame::FileWrapper::setCompression(unsigned short format, unsigned long compressedSize, unsigned long uncompressedSize)
 {
-  // not supporting any other format right now as all saves seem to use LZ4. format 1 is supposed to be zlib
-  if (format == 2) {
+  if (format == 1) {
+    m_Decoder.reset(new ZlibDecoder(m_Decoder, compressedSize, uncompressedSize));
+  } else if (format == 2) {
     m_Decoder.reset(new LZ4Decoder(m_Decoder, compressedSize, uncompressedSize));
   }
 }

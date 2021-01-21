@@ -44,7 +44,7 @@ function unpack(cb) {
   console.log('unpack', srcPath, buildPath, instPath);
   tar.extract({ file: TEMP_PATH })
   .then(() => fs.promises.mkdir(buildPath).catch(err => console.log(err.message)))
-  .then(() => run('cmake.exe', ['..', `-DCMAKE_INSTALL_PREFIX=${instPath}`], buildPath))
+  .then(() => run('cmake.exe', ['..', `-DCMAKE_INSTALL_PREFIX=${instPath}`, '-A' 'x64'], buildPath))
   .then(() => run('cmake.exe', ['--build', '.', '--config', 'Release'], buildPath))
   .then(() => run('cmake.exe', ['--install', '.'], buildPath))
   .then(cb)

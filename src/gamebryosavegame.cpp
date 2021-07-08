@@ -4,7 +4,6 @@
 #include <vector>
 #include <ctime>
 #include <sstream>
-#include <nbind/nbind.h>
 #include <lz4.h>
 #include <zlib.h>
 #include <iostream>
@@ -163,14 +162,65 @@ bool ignoreChar(wchar_t ch) {
   return isCharInRange(ch, L'0', L'9') || (ch == L'-') || (ch == L'.') || (ch == L' ');
 }
 
-GamebryoSaveGame::GamebryoSaveGame(const std::string &fileName, bool quick)
- : m_QuickRead(quick)
- , m_FileName(fileName)
- , m_PCLevel(0)
- , m_SaveNumber()
- , m_CreationTime(0)
+void GamebryoSaveGame::readAsync(const Napi::Env &env, const std::string &fileName, bool quick, const Napi::Function& cb) {
+  m_FileName = fileName;
+  m_QuickRead = quick;
+
+  std::thread* loadThread;
+
+  m_ThreadCB = Napi::ThreadSafeFunction::New(env, cb,
+    "AsyncLoadCB", 0, 1, [loadThread](Napi::Env) {
+    loadThread->join();
+    delete loadThread;
+  });
+
+
+  loadThread = new std::thread{ [this, env]() {
+    auto callback = [](Napi::Env env, Napi::Function jsCallback, GamebryoSaveGame* result) {
+      jsCallback.Call({ env.Null(), result->Value() });
+    };
+
+    auto callbackError = [](Napi::Env env, Napi::Function jsCallback, std::string* err = nullptr) {
+      jsCallback.Call({ Napi::String::New(env, err->c_str()) });
+    };
+
+    try {
+      read();
+      m_ThreadCB.Acquire();
+      m_ThreadCB.BlockingCall(this, callback);
+    }
+    catch (const std::exception& e) {
+      std::string* err = new std::string{ e.what() };
+      m_ThreadCB.Acquire();
+      m_ThreadCB.BlockingCall(err, callbackError);
+    }
+
+    m_ThreadCB.Release();
+  } };
+}
+
+GamebryoSaveGame::GamebryoSaveGame(const Napi::CallbackInfo &info)
+  : Napi::ObjectWrap<GamebryoSaveGame>(info)
+  , m_PCLevel(0)
+  , m_SaveNumber()
+  , m_CreationTime(0)
 {
-  CodePage encoding = determineEncoding(fileName);
+  if ((info.Length() == 1) && (info[0] == info.Env().Null())) {
+    // allow reading asynchronously later
+  } else {
+    try {
+      m_FileName = info[0].ToString();
+      m_QuickRead = info[1].ToBoolean();
+      read();
+    }
+    catch (const std::exception& e) {
+      throw Napi::Error::New(info.Env(), e.what());
+    }
+  }
+}
+
+void GamebryoSaveGame::read() {
+  CodePage encoding = determineEncoding(m_FileName);
   {
     FileWrapper file(this, encoding);
 
@@ -195,7 +245,7 @@ GamebryoSaveGame::GamebryoSaveGame(const std::string &fileName, bool quick)
   if (m_CreationTime == 0) {
 #ifdef _WIN32
     struct _stat fileStat;
-    int res = _wstat(toWC(fileName.c_str(), CodePage::UTF8, fileName.size()).c_str(), &fileStat);
+    int res = _wstat(toWC(m_FileName.c_str(), CodePage::UTF8, m_FileName.size()).c_str(), &fileStat);
 #else
     struct stat fileStat;
     int res = stat(fileName.c_str(), &fileStat);
@@ -552,13 +602,7 @@ void GamebryoSaveGame::FileWrapper::readImage(unsigned long width, unsigned long
   int bytes = width * height * bpp;
 
   std::vector<uint8_t> buffer;
-  try {
-    buffer.resize(bytes);
-  }
-  catch (const std::bad_alloc&) {
-    NBIND_ERR("Out of memory");
-    return;
-  }
+  buffer.resize(bytes);
 
   m_Game->m_ScreenshotDim = Dimensions(width, height);
 
@@ -628,124 +672,24 @@ void GamebryoSaveGame::FileWrapper::sanityCheck(bool conditionMatch, const char*
   }
 }
 
+Napi::Value create(const Napi::CallbackInfo &info) {
+  try {
+    Napi::String fileName = info[0].ToString();
+    Napi::Boolean quick = info[1].ToBoolean();
+    Napi::Function callback = info[2].As<Napi::Function>();
 
-class LoadWorker : public Nan::AsyncWorker {
-public:
-  LoadWorker(const std::string &filePath, bool quick, Nan::Callback *appCallback)
-    : Nan::AsyncWorker(appCallback)
-    , m_FilePath(filePath)
-    , m_Quick(quick)
-    , m_Game(nullptr)
-  {}
-
-  ~LoadWorker() {
-    delete m_Game;
+    Napi::Object obj = GamebryoSaveGame::CreateNewItem(info.Env());
+    GamebryoSaveGame::Unwrap(obj)->readAsync(info.Env(), fileName.Utf8Value(), quick, callback);
+    return info.Env().Undefined();
+  }
+  catch (const std::exception& e) {
+    throw Napi::Error::New(info.Env(), e.what());
   }
 
-  void Execute() {
-    try {
-      m_Game = new GamebryoSaveGame(m_FilePath, m_Quick);
-    }
-    catch (const MoreInfoException &err) {
-      m_ErrorFileName = err.fileName();
-      m_ErrorSysCall = err.syscall();
-      m_ErrorCode = err.errorCode();
-      SetErrorMessage(err.what());
-    }
-    catch (const DataInvalid &err) {
-      SetErrorMessage(err.what());
-      m_ErrorPos = err.offset();
-    }
-    catch (const std::exception &err) {
-      SetErrorMessage(err.what());
-    }
-  }
 
-  void HandleOKCallback() {
-    Nan::HandleScope scope;
-    v8::Local<v8::Context> context = Nan::GetCurrentContext();
-    v8::Isolate* isolate = context->GetIsolate();
-
-    v8::Local<v8::Object> res = Nan::New<v8::Object>();
-    res->Set(context, "fileName"_n, Nan::New(m_Game->fileName().c_str()).ToLocalChecked());
-    res->Set(context, "characterLevel"_n, Nan::New(m_Game->characterLevel()));
-    res->Set(context, "characterName"_n, Nan::New(m_Game->characterName().c_str()).ToLocalChecked());
-    res->Set(context, "creationTime"_n, Nan::New(m_Game->creationTime()));
-    res->Set(context, "playTime"_n, Nan::New(m_Game->playTime().c_str()).ToLocalChecked());
-    res->Set(context, "location"_n, Nan::New(m_Game->location().c_str()).ToLocalChecked());
-    res->Set(context, "saveNumber"_n, Nan::New(m_Game->saveNumber()));
-
-    v8::Local<v8::Array> plugins = Nan::New<v8::Array>();
-    std::vector<std::string> pluginsIn = m_Game->plugins();
-    for (int i = 0; i < pluginsIn.size(); ++i) {
-      plugins->Set(context, i, Nan::New(pluginsIn[i]).ToLocalChecked());
-    }
-    res->Set(context, "plugins"_n, plugins);
-
-    Dimensions sizeIn = m_Game->screenshotSize();
-    v8::Local<v8::Object> screenSize = Nan::New<v8::Object>();
-    if (m_Quick) {
-      screenSize->Set(context, "width"_n, Nan::New(0));
-      screenSize->Set(context, "height"_n, Nan::New(0));
-    }
-    else {
-      screenSize->Set(context, "width"_n, Nan::New(sizeIn.width()));
-      screenSize->Set(context, "height"_n, Nan::New(sizeIn.height()));
-    }
-    res->Set(context, "screenshotSize"_n, screenSize);
-    if (m_Quick) {
-      res->Set(context, "screenshot"_n, Nan::Null());
-    }
-    else {
-      const std::vector<uint8_t> &screenshot = m_Game->screenshotData();
-      auto buffer = v8::ArrayBuffer::New(isolate, screenshot.size());
-      memcpy(buffer->GetContents().Data(), screenshot.data(), screenshot.size());
-      res->Set(context, "screenshot"_n, v8::Uint8ClampedArray::New(buffer, 0, buffer->ByteLength()));
-    }
-
-    v8::Local<v8::Value> argv[] = {
-      Nan::Null(),
-      res,
-    };
-
-    callback->Call(2, argv, async_resource);
-  }
-
-  virtual void HandleErrorCallback() {
-    Nan::HandleScope scope;
-
-    v8::Local<v8::Value> ex;
-
-    if (m_ErrorCode != 0) {
-      ex = Nan::ErrnoException(m_ErrorCode, m_ErrorSysCall.c_str(), ErrorMessage(), m_ErrorFileName.c_str());
-    }
-    else {
-      v8::Local<v8::Context> context = Nan::GetCurrentContext();
-      v8::Local<v8::Value> temp = Nan::Error(Nan::New(ErrorMessage()).ToLocalChecked());
-      if (m_ErrorPos != 0) {
-        temp->ToObject(context).ToLocalChecked()->Set(context, "offset"_n, Nan::New(static_cast<uint32_t>(m_ErrorPos)));
-      }
-      ex = temp;
-    }
-
-    v8::Local<v8::Value> argv[] = { ex };
-    callback->Call(1, argv, async_resource);
-  }
-
-private:
-
-  std::string m_FilePath;
-  bool m_Quick;
-  std::string m_ErrorFileName;
-  std::string m_ErrorSysCall;
-  int m_ErrorCode{0};
-  size_t m_ErrorPos{0};
-  GamebryoSaveGame *m_Game;
-
-};
-
-void create(const std::string &fileName, bool quick, nbind::cbFunction callback) {
+  /*
   Nan::AsyncQueueWorker(
     new LoadWorker(fileName, quick, new Nan::Callback(callback.getJsFunction())));
+  */
 }
 

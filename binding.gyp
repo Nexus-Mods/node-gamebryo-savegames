@@ -10,8 +10,12 @@
                 "src/fmt/format.cc"
             ],
             "include_dirs": [
+                "<!(node -p \"require('node-addon-api').include_dir\")",
                 "./lz4/include",
                 "./zlib/include"
+            ],
+            "dependencies": [
+              "<!(node -p \"require('node-addon-api').gyp\")"
             ],
             "libraries": [
                 "-l../lz4/dll/liblz4",

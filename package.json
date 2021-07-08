@@ -1,17 +1,13 @@
 {
   "name": "gamebryo-savegame",
-  "version": "1.4.3",
+  "version": "2.0.0",
   "description": "Parses gamebryo savegames",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
   "scripts": {
-    "autogypi": "autogypi",
-    "node-gyp": "node-gyp",
-    "emcc-path": "emcc-path",
-    "copyasm": "copyasm",
     "prebuild": "node download_lz4.js && node download_zlib.js",
     "build": "autogypi && node-gyp configure build",
-    "install": "npm run build && copyasm build dist && copyfiles -f ./lz4/dll/liblz4.dll dist && copyfiles -f ./zlib/bin/zlib.dll dist"
+    "install": "npm run build && copyfiles -f ./build/Release/GamebryoSave.node dist && copyfiles -f ./lz4/dll/liblz4.dll dist && copyfiles -f ./zlib/bin/zlib.dll dist"
   },
   "author": "Black Tree Gaming Ltd",
   "license": "GPL-3.0",
@@ -19,7 +15,7 @@
     "autogypi": "^0.2.2",
     "copyfiles": "^2.1.0",
     "cross-fetch": "^3.0.1",
-    "nbind": "TanninOne/nbind",
+    "node-addon-api": "^4.0.0",
     "node-gyp": "^6.1.0",
     "node-stream-zip": "^1.8.0"
   },

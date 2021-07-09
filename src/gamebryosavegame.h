@@ -64,6 +64,7 @@ public:
       InstanceAccessor("fileName", &GamebryoSaveGame::fileName, nullptr, napi_enumerable),
       InstanceAccessor("screenshotSize", &GamebryoSaveGame::screenshotSize, nullptr, napi_enumerable),
       InstanceAccessor("playTime", &GamebryoSaveGame::playTime, nullptr, napi_enumerable),
+      InstanceAccessor("screenshot", &GamebryoSaveGame::screenshot, nullptr, napi_enumerable),
       InstanceMethod("getScreenshot", &GamebryoSaveGame::getScreenshot),
       });
     Napi::FunctionReference* constructor = new Napi::FunctionReference();
@@ -108,6 +109,8 @@ public:
     return result;
   }
   Napi::Value playTime(const Napi::CallbackInfo &info) { return Napi::String::New(info.Env(), m_Playtime); }
+
+  Napi::Value screenshot(const Napi::CallbackInfo &info) { return getScreenshot(info); }
   
   Napi::Value getScreenshot(const Napi::CallbackInfo &info) {
     Napi::Buffer<uint8_t> buffer = Napi::Buffer<uint8_t>::New(info.Env(), m_Screenshot.size());

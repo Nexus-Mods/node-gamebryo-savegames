@@ -1,6 +1,6 @@
 {
   "name": "gamebryo-savegame",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "description": "Parses gamebryo savegames",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",

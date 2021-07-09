@@ -1,13 +1,13 @@
 {
   "name": "gamebryo-savegame",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Parses gamebryo savegames",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
   "scripts": {
     "prebuild": "node download_lz4.js && node download_zlib.js",
     "build": "autogypi && node-gyp configure build",
-    "install": "npm run build && copyfiles -f ./build/Release/GamebryoSave.node dist && copyfiles -f ./lz4/dll/liblz4.dll dist && copyfiles -f ./zlib/bin/zlib.dll dist"
+    "install": "npm run build && copyfiles -f ./build/Release/GamebryoSave.* dist && copyfiles -f ./lz4/dll/liblz4.dll dist && copyfiles -f ./zlib/bin/zlib.dll dist"
   },
   "author": "Black Tree Gaming Ltd",
   "license": "GPL-3.0",

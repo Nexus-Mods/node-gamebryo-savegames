@@ -174,7 +174,6 @@ void GamebryoSaveGame::readAsync(const Napi::Env &env, const std::string &fileNa
     delete loadThread;
   });
 
-
   loadThread = new std::thread{ [this, env]() {
     auto callback = [](Napi::Env env, Napi::Function jsCallback, GamebryoSaveGame* result) {
       jsCallback.Call({ env.Null(), result->Value() });
@@ -205,6 +204,8 @@ GamebryoSaveGame::GamebryoSaveGame(const Napi::CallbackInfo &info)
   , m_SaveNumber()
   , m_CreationTime(0)
 {
+  Ref();
+
   if ((info.Length() == 1) && (info[0] == info.Env().Null())) {
     // allow reading asynchronously later
   } else {
@@ -258,6 +259,7 @@ void GamebryoSaveGame::read() {
 
 GamebryoSaveGame::~GamebryoSaveGame()
 {
+  Unref();
 }
 
 // don't want no dependency on windows header

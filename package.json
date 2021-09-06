@@ -20,6 +20,6 @@
     "node-stream-zip": "^1.8.0"
   },
   "devDependencies": {
-    "tar": "^6.1.2"
+    "tar": "^6.1.9"
   }
 }

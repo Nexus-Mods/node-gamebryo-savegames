@@ -250,10 +250,3 @@ Napi::Object InitAll(Napi::Env env, Napi::Object exports) {
 }
 
 NODE_API_MODULE(GamebryoSaveGame, InitAll)
-
-
-/*
-NBIND_GLOBAL() {
-  function(create);
-}
-*/

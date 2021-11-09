@@ -180,7 +180,8 @@ void GamebryoSaveGame::readAsync(const Napi::Env &env, const std::string &fileNa
     };
 
     auto callbackError = [](Napi::Env env, Napi::Function jsCallback, std::string* err = nullptr) {
-      jsCallback.Call({ Napi::String::New(env, err->c_str()) });
+      Napi::Error errRef = Napi::Error::New(env, err->c_str());
+      jsCallback.Call({ static_cast<napi_value>(errRef.Value()) });
     };
 
     try {
@@ -580,7 +581,7 @@ void GamebryoSaveGame::FileWrapper::read(void *buff, std::size_t length)
   if (!m_Decoder->read(static_cast<char *>(buff), length)) {
     m_Decoder->clear();
     m_Decoder->seek(0, std::ios::end);
-    throw std::runtime_error(fmt::format("xyz unexpected end of file at \"{}\" (read of \"{}\" bytes)", m_Decoder->tell(), length).c_str());
+    throw std::runtime_error(fmt::format("unexpected end of file at \"{}\" (read of \"{}\" bytes)", m_Decoder->tell(), length).c_str());
   }
 }
 

@@ -6,9 +6,10 @@ const fetch = require('cross-fetch');
 const tar = require('tar');
 
 const TEMP_PATH = 'zlib.tar.gz';
+const ZLIB_VERSION = '1.2.12';
 
 function download(cb) {
-    fetch('https://www.zlib.net/zlib-1.2.11.tar.gz')
+    fetch(`https://www.zlib.net/zlib-${ZLIB_VERSION}.tar.gz`)
         .then(res => {
             console.log(res.status, res.statusText);
             res.arrayBuffer()
@@ -38,7 +39,7 @@ function run(cmd, args, cwd) {
 }
 
 function unpack(cb) {
-  const srcPath = path.join(__dirname, 'zlib-1.2.11');
+  const srcPath = path.join(__dirname, `zlib-${ZLIB_VERSION}`);
   const buildPath = path.join(srcPath, 'build');
   const instPath = path.join(__dirname, 'zlib');
   console.log('unpack', srcPath, buildPath, instPath);

@@ -7,3 +7,5 @@ dist/liblz4.dll
 dist/nbind.node
 bin  
 dist  
+.prebuildrc  
+prebuild  

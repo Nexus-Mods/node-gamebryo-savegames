@@ -1,25 +1,38 @@
 {
   "name": "gamebryo-savegame",
-  "version": "2.0.4",
+  "version": "2.0.5",
   "description": "Parses gamebryo savegames",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Nexus-Mods/node-gamebryo-savegames.git"
+  },
   "scripts": {
+    "upload": "prebuild.cmd -r napi -t 4 -a x64 --prepack codesign",
     "prebuild": "node download_lz4.js && node download_zlib.js",
     "build": "autogypi && node-gyp configure build",
-    "install": "npm run build && copyfiles -f ./build/Release/GamebryoSave.* dist && copyfiles -f ./lz4/dll/liblz4.dll dist && copyfiles -f ./zlib/bin/zlib.dll dist"
+    "preinstall": "autogypi",
+    "nativebuild": "node-gyp rebuild",
+    "install": "prebuild-install -r napi -t 4 -a x64 || node-gyp rebuild",
+    "postinstall": "copyfiles -f ./build/Release/*.node dist && copyfiles -f ./lz4/dll/liblz4.dll dist && copyfiles -f ./zlib/bin/zlib.dll dist"
   },
   "author": "Black Tree Gaming Ltd",
   "license": "GPL-3.0",
+  "binary": {
+    "napi_versions": [4]
+  },
   "dependencies": {
     "autogypi": "^0.2.2",
     "copyfiles": "^2.1.0",
     "cross-fetch": "^3.0.1",
     "node-addon-api": "^4.0.0",
-    "node-gyp": "^6.1.0",
-    "node-stream-zip": "^1.8.0"
+    "node-gyp": "^9.0.0",
+    "node-stream-zip": "^1.8.0",
+    "prebuild-install": "7.1.0"
   },
   "devDependencies": {
+    "prebuild": "^11.0.3",
     "tar": "^6.1.9"
   }
 }

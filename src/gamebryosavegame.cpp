@@ -1,5 +1,6 @@
 #include "gamebryosavegame.h"
 
+#include <sys/stat.h>
 #include <stdexcept>
 #include <vector>
 #include <ctime>
@@ -7,6 +8,7 @@
 #include <lz4.h>
 #include <zlib.h>
 #include <iostream>
+#include <thread>
 #include <fstream>
 
 uint32_t windowsTicksToEpoch(int64_t windowsTicks)
@@ -22,19 +24,21 @@ uint32_t windowsTicksToEpoch(int64_t windowsTicks)
 class MoreInfoException : public std::exception {
 public:
   MoreInfoException(const char *message, const char *syscall, const std::string &fileName, int code)
-    : std::exception(message)
+    : std::exception(std::runtime_error(message))
     , m_SysCall(syscall)
     , m_FileName(fileName)
     , m_ErrorCode(code)
   {}
 
-  std::string fileName() const { return m_FileName; }
-  std::string syscall() const { return m_SysCall; }
-  int errorCode() const { return m_ErrorCode; }
 private:
-  std::string m_FileName;
   std::string m_SysCall;
+  std::string m_FileName;
   int m_ErrorCode;
+
+public:
+  std::string syscall() const { return m_SysCall; }
+  std::string fileName() const { return m_FileName; }
+  int errorCode() const { return m_ErrorCode; }
 };
 
 class DirectDecoder : public IDecoder {
@@ -250,7 +254,7 @@ void GamebryoSaveGame::read() {
     int res = _wstat(toWC(m_FileName.c_str(), CodePage::UTF8, m_FileName.size()).c_str(), &fileStat);
 #else
     struct stat fileStat;
-    int res = stat(fileName.c_str(), &fileStat);
+    int res = stat(m_FileName.c_str(), &fileStat);
 #endif
     if (res == 0) {
       m_CreationTime = static_cast<uint32_t>(fileStat.st_mtime);

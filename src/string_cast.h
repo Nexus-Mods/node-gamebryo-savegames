@@ -1,7 +1,9 @@
 #pragma once
 
 #include <string>
+#ifdef _WIN32
 #include <windows.h>
+#endif
 
 enum class CodePage {
   LOCAL,
@@ -11,6 +13,7 @@ enum class CodePage {
   UTF8ORLATIN1,
 };
 
+#ifdef _WIN32
 UINT windowsCP(CodePage codePage)
 {
   switch (codePage) {
@@ -89,3 +92,11 @@ static std::string toMB(const wchar_t * const &source, CodePage codePage, size_t
 
   return result;
 }
+#else
+static std::string toWC(const char * const &source, CodePage codePage, size_t sourceLength) {
+  return source;
+}
+static std::string toMB(const char * const &source, CodePage codePage, size_t sourceLength) {
+  return source;
+}
+#endif

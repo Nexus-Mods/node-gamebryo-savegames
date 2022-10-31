@@ -51,12 +51,14 @@ function unpack(cb) {
   .then(cb)
 }
 
-try {
-    fs.statSync('zlib');
-    console.log('zlib already installed');
-} catch(err) {
-    download(() => {
-        unpack(() => {
-        });
-    });
+if (process.platform === "win32"){
+  try {
+      fs.statSync('zlib');
+      console.log('zlib already installed');
+  } catch(err) {
+      download(() => {
+          unpack(() => {
+          });
+      });
+  }
 }

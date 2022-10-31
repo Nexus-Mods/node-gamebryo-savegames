@@ -37,13 +37,15 @@ function unpack(cb) {
         });
 }
 
-try {
-    fs.statSync('lz4');
-    console.log('lz4 already installed');
-} catch(err) {
-    download(() => {
-        unpack(() => {
-            fs.unlinkSync(TEMP_PATH);
+if (process.platform === "win32"){
+    try {
+        fs.statSync('lz4');
+        console.log('lz4 already installed');
+    } catch(err) {
+        download(() => {
+            unpack(() => {
+                fs.unlinkSync(TEMP_PATH);
+            });
         });
-    });
+    }
 }

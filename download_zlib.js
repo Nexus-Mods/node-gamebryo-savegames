@@ -6,8 +6,7 @@ const fetch = require('cross-fetch');
 const tar = require('tar');
 
 const TEMP_PATH = 'zlib.tar.gz';
-//const ZLIB_VERSION = '1.2.13';
-const ZLIB_VERSION = '1.3';
+const ZLIB_VERSION = '1.3.1';
 
 function download(cb) {
     fetch(`https://www.zlib.net/zlib-${ZLIB_VERSION}.tar.gz`)

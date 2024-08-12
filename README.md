@@ -1,6 +1,6 @@
 # Gamebryo Savegame parser
 
-Savegame parser for the games Fallout 3, Fallout NVFallout 4, Oblivion, Skyrim and Skyrim Special Edition
+Savegame parser for the games Fallout 3, Fallout NV, Fallout 4, Oblivion, Skyrim and Skyrim Special Edition
 
 # Compiling
 

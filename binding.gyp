@@ -36,6 +36,11 @@
                         "VCCLCompilerTool": {
                             "ExceptionHandling": 1
                         }
+                    },
+                    "msbuild_settings": {
+                        "ClCompile": {
+                            "AdditionalOptions": ['/std:c++20', '/Zc:__cplusplus']
+                        }
                     }
                 }]
             ]

@@ -9,7 +9,10 @@
             "cflags_cc!": [ "-fno-exceptions" ],
             "sources": [
                 "src/gamebryosavegame.cpp",
-                "src/fmt/format.cc"
+                "src/fmt/format.cc",
+                "src/gamebryosavegame.h",
+                "src/string_cast.h",
+                "src/fmt/format.h"
             ],
             "include_dirs": [
                 "<!(node -p \"require('node-addon-api').include_dir\")",

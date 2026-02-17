@@ -9,7 +9,7 @@ const TEMP_PATH = 'zlib.tar.gz';
 const ZLIB_VERSION = '1.3.1';
 
 function download(cb) {
-    fetch(`https://www.zlib.net/zlib-${ZLIB_VERSION}.tar.gz`)
+    fetch(`https://www.zlib.net/fossils/zlib-${ZLIB_VERSION}.tar.gz`)
         .then(res => {
             console.log(res.status, res.statusText);
             res.arrayBuffer()
